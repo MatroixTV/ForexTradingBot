@@ -5,7 +5,7 @@ import joblib
 
 def train_model():
     # Load dataset
-    df = pd.read_csv('training_dataset.csv')
+    df = pd.read_csv('C:/Users/ismac/PycharmProjects/forex_trading_bot/src/data/training_dataset.csv')
 
     # Split into features and target
     X = df.drop(columns=['target'])
