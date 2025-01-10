@@ -40,47 +40,87 @@
 #     return signal, sl, tp
 
 
-import numpy as np
 import pandas as pd
 
 class TradingStrategy:
     def __init__(self, df):
+        """
+        Initialize the trading strategy with the DataFrame and configuration.
+        """
         self.df = df
+        self.buy_threshold_rsi = 40  # Buy when RSI < this value
+        self.sell_threshold_rsi = 60  # Sell when RSI > this value
+        self.macd_signal_diff = 0  # Positive MACD difference for buy, negative for sell
+        self.rtd_positive = 0  # RTD Trend threshold for buy
+        self.rtd_negative = 0  # RTD Trend threshold for sell
 
     def trading_logic(self, row):
         """
-        Determine trading actions based on indicators.
+        Define the trading logic for a single row of data.
+        Returns "BUY", "SELL", or None.
+        """
+        try:
+            # Extract necessary indicators
+            rsi = row["RSI"]
+            macd = row["MACD"]
+            macd_signal = row["MACD_Signal"]
+            rtd_trend = row["RTD_Trend"]
+
+            # Debugging output
+            print(
+                f"Evaluating row: RSI={rsi}, MACD={macd}, MACD_Signal={macd_signal}, RTD_Trend={rtd_trend}"
+            )
+
+            # Trading logic conditions
+            if (
+                rsi < self.buy_threshold_rsi
+                and macd > macd_signal
+                and rtd_trend > self.rtd_positive
+            ):
+                print("BUY signal triggered.")
+                return "BUY"
+            elif (
+                rsi > self.sell_threshold_rsi
+                and macd < macd_signal
+                and rtd_trend < self.rtd_negative
+            ):
+                print("SELL signal triggered.")
+                return "SELL"
+            else:
+                print("No trade signal triggered.")
+                return None
+
+        except KeyError as e:
+            print(f"Error in trading_logic: Missing key {e}")
+            return None
+
+    def calculate_confidence(self, row):
+        """
+        Calculate confidence score for a trade decision.
+        Example: Combine RSI, MACD, and RTD metrics into a weighted confidence score.
         """
         try:
             rsi = row["RSI"]
             macd = row["MACD"]
+            macd_signal = row["MACD_Signal"]
             rtd_trend = row["RTD_Trend"]
 
-            # Define thresholds for signals
-            if rsi < 30 and macd > 0 and rtd_trend > 0:
-                return "BUY"
-            elif rsi > 70 and macd < 0 and rtd_trend < 0:
-                return "SELL"
-        except Exception as e:
-            print(f"Error in trading_logic: {e}")
-        return None
+            confidence = 0
 
+            # Weight RSI
+            if rsi < self.buy_threshold_rsi:
+                confidence += (self.buy_threshold_rsi - rsi) / self.buy_threshold_rsi
+            elif rsi > self.sell_threshold_rsi:
+                confidence -= (rsi - self.sell_threshold_rsi) / self.sell_threshold_rsi
 
+            # Weight MACD
+            confidence += macd - macd_signal
 
-    def calculate_confidence(self, row):
-        """
-        Calculate confidence for a trade based on multiple indicators.
-        :param row: Single row of DataFrame.
-        :return: Confidence score.
-        """
-        confidence = 0
-        try:
-            if row['RTD_Trend'] > 0:  # Favorable RTD trend
-                confidence += 0.4
-            if row['XMode_Signal'] != 0:  # XMode Signal present
-                confidence += 0.3
-            if abs(row['MAW_Oscillator']) > 1:  # Significant MAW Oscillation
-                confidence += 0.3
-        except Exception as e:
-            print(f"Error in calculate_confidence: {e}")
-        return confidence
+            # Weight RTD Trend
+            confidence += rtd_trend
+
+            print(f"Calculated confidence: {confidence}")
+            return confidence
+        except KeyError as e:
+            print(f"Error in calculate_confidence: Missing key {e}")
+            return 0
