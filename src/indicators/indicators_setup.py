@@ -73,48 +73,29 @@
 
 
 import pandas as pd
-import numpy as np
-from ta.momentum import RSIIndicator
-from ta.trend import MACD, SMAIndicator
-from ta.volatility import BollingerBands
-from ta.volatility import AverageTrueRange
+import ta
 
-def calculate_indicators(df):
+def compute_indicators(df):
     """
-    Calculates all necessary indicators for the trading strategy.
+    Computes indicators such as MACD, Signal Line, EMA, RSI, ATR, and RTD Trend.
     """
-    # Ensure Date is parsed correctly
-    df["Date"] = pd.to_datetime(df["Date"])
-    df.set_index("Date", inplace=True)
-
-    # Bollinger Bands
-    bb = BollingerBands(close=df["Close"], window=20, window_dev=2)
-    df["BB_Upper"] = bb.bollinger_hband()
-    df["BB_Lower"] = bb.bollinger_lband()
-
-    # RSI
-    rsi = RSIIndicator(close=df["Close"], window=14)
-    df["RSI"] = rsi.rsi()
+    # Ensure required columns are present
+    required_columns = ['Close', 'High', 'Low']
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Missing required column: {col}")
 
     # MACD
-    macd = MACD(close=df["Close"], window_slow=26, window_fast=12, window_sign=9)
-    df["MACD"] = macd.macd()
-    df["MACD_Signal"] = macd.macd_signal()
+    df['MACD'] = ta.trend.MACD(df['Close'], window_slow=26, window_fast=12, window_sign=9).macd()
+    df['MACD_Signal'] = ta.trend.MACD(df['Close'], window_slow=26, window_fast=12, window_sign=9).macd_signal()
 
-    # Average True Range (ATR)
-    atr = AverageTrueRange(high=df["High"], low=df["Low"], close=df["Close"], window=14)
-    df["ATR"] = atr.average_true_range()
+    # RSI
+    df['RSI'] = ta.momentum.RSIIndicator(df['Close'], window=14).rsi()
 
-    # MAMA/FAMA for MAW.py
-    df["MAMA"] = df["Close"].rolling(window=10).mean()  # Placeholder for MAMA calculation
-    df["FAMA"] = df["Close"].rolling(window=20).mean()  # Placeholder for FAMA calculation
+    # ATR
+    df['ATR'] = ta.volatility.AverageTrueRange(df['High'], df['Low'], df['Close'], window=14).average_true_range()
 
-    # RTD Trend (Placeholder Logic)
-    df["RTD_Trend"] = np.where(df["RSI"] > 50, "UP", "DOWN")
+    # RTD Trend (Placeholder: Replace with actual RTD Trend calculation)
+    df['RTD_Trend'] = 'HOLD'  # Example placeholder value
 
-    # Fill missing values
-    df.bfill(inplace=True)
-    df.ffill(inplace=True)
-
-    print(f"Indicators calculated: {list(df.columns)}")
-    return df.reset_index()
+    return df

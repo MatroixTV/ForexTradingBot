@@ -41,47 +41,53 @@
 
 
 import pandas as pd
-from src.strategies.xmode import calculate_xmode_signals
-from src.strategies.MAW import calculate_maw_signals
-from src.strategies.RTD import calculate_rtd_signals
-import logging
 
 class TradingStrategy:
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
-        self.logger.addHandler(handler)
+        self.position = None  # Track current position (e.g., "BUY", "SELL")
 
     def trading_logic(self, row):
+        """
+        Determine trade action based on indicators.
+        """
         try:
-            # Extract indicator values
-            rsi = row['RSI']
-            macd = row['MACD']
-            macd_signal = row['MACD_Signal']
-            rtd_trend = row['RTD_Trend']
+            rsi = row["RSI"]
+            macd = row["MACD"]
+            macd_signal = row["MACD_Signal"]
+            rtd_trend = row["RTD_Trend"]
+            atr = row["ATR"]
 
-            # Debug logs for indicator values
-            self.logger.debug(f"RSI: {rsi}, MACD: {macd}, MACD_Signal: {macd_signal}, RTD_Trend: {rtd_trend}")
+            # Compute confidence metric
+            confidence = (
+                0.3 * (rsi < 30) +  # Oversold
+                0.4 * (macd > macd_signal) +  # MACD bullish crossover
+                0.3 * (rtd_trend == "BUY")  # RTD trend alignment
+            )
 
-            # Relaxed trading conditions
-            if pd.isna(rsi) or pd.isna(macd) or pd.isna(macd_signal) or pd.isna(rtd_trend):
-                self.logger.debug("Skipped row due to missing indicator values.")
-                return None
+            # Dynamic thresholds
+            stop_loss = row["Close"] - 1.5 * atr
+            take_profit = row["Close"] + 2.0 * atr
 
-            # Buy condition
-            if rsi < 30 and macd > macd_signal and rtd_trend > 0:
-                self.logger.debug("BUY signal triggered.")
-                return "BUY"
+            # Decide action based on confidence
+            if confidence >= 0.7 and self.position != "BUY":
+                self.position = "BUY"
+                return {
+                    "action": "BUY",
+                    "price": row["Close"],
+                    "date": row["Date"],
+                    "stop_loss": stop_loss,
+                    "take_profit": take_profit
+                }
+            elif confidence <= 0.3 and self.position != "SELL":
+                self.position = "SELL"
+                return {
+                    "action": "SELL",
+                    "price": row["Close"],
+                    "date": row["Date"],
+                    "stop_loss": stop_loss,
+                    "take_profit": take_profit
+                }
 
-            # Sell condition
-            if rsi > 70 and macd < macd_signal and rtd_trend < 0:
-                self.logger.debug("SELL signal triggered.")
-                return "SELL"
-
-            self.logger.debug("No trade conditions met.")
-            return None
         except Exception as e:
-            self.logger.error(f"Error in trading_logic: {e}")
-            return None
+            print(f"Error in trading_logic: {e}")
+        return None
