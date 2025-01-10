@@ -29,55 +29,60 @@
 
 
 import pandas as pd
-from src.indicators.indicators_setup import calculate_indicators
 from src.strategies.strategy_logic import TradingStrategy
+from src.indicators.indicators_setup import calculate_indicators
+
+
 def backtest(df):
     """
-    Perform backtesting on the DataFrame using the defined strategy logic.
+    Backtest function to simulate trades.
     """
-    # Ensure 'Date' is a column and not part of the index
-    if "Date" not in df.columns:
-        df.reset_index(inplace=True)
-        print("Resetting index to include 'Date' as a column.")
+    # Calculate indicators
+    df = calculate_indicators(df)
+
+    print("Indicators calculated:", list(df.columns))
+
+    # Initialize strategy
+    strategy = TradingStrategy(df)
 
     trades = []
     balance = 10000  # Initial balance
-    position = None  # Track the current open position
-    strategy = TradingStrategy(df)
+    position = None
 
-    for idx, row in df.iterrows():
+    for index, row in df.iterrows():
+        print(f"Evaluating row: RSI={row['RSI']}, MACD={row['MACD']}, RTD_Trend={row['RTD_Trend']}")
+
+        # Get trading action
         action = strategy.trading_logic(row)
 
-        if action == "BUY" and not position:
-            print(f"BUY signal triggered at {row['Date']}, price: {row['Close']}")
+        if action == "BUY" and position is None:
             position = {"entry_price": row["Close"], "entry_date": row["Date"]}
+            trades.append({"action": "BUY", "price": row["Close"], "date": row["Date"]})
+            print(f"BUY signal triggered. Index: {index}, Action: {action}")
 
-        elif action == "SELL" and position:
-            print(f"SELL signal triggered at {row['Date']}, price: {row['Close']}")
+        elif action == "SELL" and position is not None:
             profit = row["Close"] - position["entry_price"]
             balance += profit
-            trades.append({
-                "entry_date": position["entry_date"],
-                "exit_date": row["Date"],
-                "entry_price": position["entry_price"],
-                "exit_price": row["Close"],
-                "profit": profit,
-            })
+            trades.append({"action": "SELL", "price": row["Close"], "date": row["Date"]})
+            print(f"SELL signal triggered. Profit: {profit:.2f}, Index: {index}, Action: {action}")
             position = None
 
     return trades, balance
 
-if __name__ == "__main__":
-    # Load and calculate indicators
-    df = pd.read_csv("C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv")
-    df = calculate_indicators(df)
-    print(df[["RSI", "MACD", "MACD_Signal", "RTD_Trend"]].tail())
 
-    # Run backtest
+if __name__ == "__main__":
+    # Load data
+    df = pd.read_csv("C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv")
+    df["Date"] = pd.to_datetime(df["Date"])
+    df.set_index("Date", inplace=True)
+
+    # Backtest and calculate results
     trades, final_balance = backtest(df)
+
     print(f"Total Trades: {len(trades)}")
     print(f"Final Balance: {final_balance:.2f}")
-    print("Trades:", trades)
+    print(f"Trades: {trades}")
+
 
 
 

@@ -75,29 +75,24 @@ import pandas as pd
 from ta.momentum import RSIIndicator
 from ta.trend import MACD
 
+
 def calculate_indicators(df):
+    """
+    Calculate technical indicators.
+    """
     try:
-        # Ensure Date is a datetime
-        df["Date"] = pd.to_datetime(df["Date"])
-        df.set_index("Date", inplace=True)
+        df["RSI"] = RSIIndicator(close=df["Close"], window=14).rsi()
+        macd = MACD(close=df["Close"], window_slow=26, window_fast=12, window_sign=9)
+        df["MACD"] = macd.macd()
+        df["MACD_Signal"] = macd.macd_signal()
 
-        # Calculate RSI
-        rsi_indicator = RSIIndicator(df["Close"])
-        df["RSI"] = rsi_indicator.rsi()
-
-        # Calculate MACD
-        macd_indicator = MACD(df["Close"])
-        df["MACD"] = macd_indicator.macd()
-        df["MACD_Signal"] = macd_indicator.macd_signal()
-
-        # Calculate RTD Trend
+        # Example RTD calculation
         df["RTD_Trend"] = df["Close"].diff().rolling(window=14).sum()
 
-        df.bfill(inplace=True)
-        df.ffill(inplace=True)
+        df.fillna(method="bfill", inplace=True)
+        df.fillna(method="ffill", inplace=True)
 
-        print(f"Indicators calculated: {list(df.columns)}")
         return df
     except Exception as e:
         print(f"Error calculating indicators: {e}")
-        return df
+        raise

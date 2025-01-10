@@ -48,26 +48,23 @@ class TradingStrategy:
         self.df = df
 
     def trading_logic(self, row):
+        """
+        Determine trading actions based on indicators.
+        """
         try:
             rsi = row["RSI"]
             macd = row["MACD"]
-            rtd = row["RTD_Trend"]
-            print(f"Evaluating row: RSI={rsi}, MACD={macd}, RTD_Trend={rtd}")
+            rtd_trend = row["RTD_Trend"]
 
-            if pd.isna(rsi) or pd.isna(macd) or pd.isna(rtd):
-                return None
-
-            if rsi < 40 and rtd > 0:  # Adjusted threshold
-                print("BUY signal triggered.")
+            # Define thresholds for signals
+            if rsi < 30 and macd > 0 and rtd_trend > 0:
                 return "BUY"
-            elif rsi > 60 and rtd < 0:  # Adjusted threshold
-                print("SELL signal triggered.")
+            elif rsi > 70 and macd < 0 and rtd_trend < 0:
                 return "SELL"
-            else:
-                return None
         except Exception as e:
             print(f"Error in trading_logic: {e}")
-            return None
+        return None
+
 
 
     def calculate_confidence(self, row):
