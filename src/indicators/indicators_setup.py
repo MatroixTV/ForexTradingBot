@@ -71,38 +71,83 @@
 #     return df
 
 
-
+import numpy as np
 import pandas as pd
 from ta.momentum import RSIIndicator
-from ta.trend import MACD
 from ta.volatility import BollingerBands
-from src.indicators.custom_indicators import calculate_rtd, calculate_mama_fama
+from ta.trend import MACD, AverageTrueRange
+
 
 def calculate_indicators(df):
-    # RSI
-    df["RSI"] = RSIIndicator(close=df["Close"], window=14).rsi()
-
-    # MACD
-    macd = MACD(close=df["Close"])
-    df["MACD"] = macd.macd()
-    df["MACD_Signal"] = macd.macd_signal()
+    """
+    Calculate all indicators and add them to the DataFrame.
+    """
+    # Ensure required columns are present
+    required_columns = ['Close', 'High', 'Low', 'Open']
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Missing required column: {col}")
 
     # Bollinger Bands
-    bb = BollingerBands(close=df["Close"])
-    df["BB_Upper"] = bb.bollinger_hband()
-    df["BB_Lower"] = bb.bollinger_lband()
+    bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
+    df['BB_Upper'] = bb.bollinger_hband()
+    df['BB_Lower'] = bb.bollinger_lband()
+
+    # RSI
+    rsi = RSIIndicator(close=df['Close'], window=14)
+    df['RSI'] = rsi.rsi()
+
+    # MACD
+    macd = MACD(close=df['Close'], window_slow=26, window_fast=12, window_sign=9)
+    df['MACD'] = macd.macd()
+    df['MACD_Signal'] = macd.macd_signal()
 
     # ATR
-    df["ATR"] = df["High"] - df["Low"]
+    atr = AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close'], window=14)
+    df['ATR'] = atr.average_true_range()
 
-    # MAMA and FAMA
-    df["MAMA"], df["FAMA"] = calculate_mama_fama(df["Close"])
+    # MAMA/FAMA
+    df['MAMA'], df['FAMA'] = calculate_mama_fama(df['Close'])
 
-    # RTD Trend
-    df["RTD_Trend"] = calculate_rtd(df)
+    # RTD
+    df['RTD_Trend'] = calculate_rtd(df)
 
     # Fill NaN values
     df.fillna(method='bfill', inplace=True)
     df.fillna(method='ffill', inplace=True)
 
+    print(f"Indicators calculated: {list(df.columns)}")
     return df
+
+
+def calculate_mama_fama(series, fast_limit=0.5, slow_limit=0.05):
+    """
+    Calculate MAMA (MESA Adaptive Moving Average) and FAMA (Following Adaptive Moving Average).
+    """
+    mama = np.zeros(len(series))
+    fama = np.zeros(len(series))
+    smooth = np.zeros(len(series))
+    detrender = np.zeros(len(series))
+    period = np.zeros(len(series))
+    phase = np.zeros(len(series))
+    alpha = np.zeros(len(series))
+
+    for i in range(1, len(series)):
+        smooth[i] = (4 * series[i] + 3 * series[i - 1] + 2 * series[i - 2] + series[i - 3]) / 10
+        detrender[i] = smooth[i] - smooth[i - 1]
+        phase[i] = np.arctan2(detrender[i], detrender[i - 1]) if detrender[i - 1] != 0 else 0
+        period[i] = 0.9 * period[i - 1] + 0.1 * (6.28 / phase[i]) if phase[i] != 0 else period[i - 1]
+        alpha[i] = 2 / (period[i] + 1)
+        mama[i] = alpha[i] * series[i] + (1 - alpha[i]) * mama[i - 1]
+        fama[i] = 0.5 * alpha[i] * mama[i] + (1 - 0.5 * alpha[i]) * fama[i - 1]
+
+    return pd.Series(mama), pd.Series(fama)
+
+
+def calculate_rtd(df, period=14):
+    """
+    Calculate Relative Trend Direction (RTD).
+    """
+    df['Price_Change'] = df['Close'].diff()
+    rtd = df['Price_Change'].rolling(window=period).sum()
+    return rtd
