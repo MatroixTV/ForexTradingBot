@@ -1,16 +1,17 @@
 import pandas as pd
-from src.backtesting.backtest import backtest
 from src.indicators.indicators_setup import add_indicators
+from src.strategies.strategy_logic import TradingStrategy
+from src.backtesting.backtest import backtest
 
-# Main script execution
-if __name__ == "__main__":
-    # Load your data
-    data_file_path = "path/to/your/data.csv"  # Replace with actual file path
-    data = pd.read_csv(data_file_path)
+# Load data
+data = pd.read_csv("C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv")
 
-    # Add indicators to data
-    data = add_indicators(data)
+# Add indicators
+data = add_indicators(data)
 
-    # Run the backtest
-    final_balance = backtest(data)
-    print(f"Final Balance: ${final_balance:.2f}")
+# Generate trading signals
+data = TradingStrategy(data)
+
+# Run backtest
+final_balance = backtest(data)
+print(f"Final Balance: ${final_balance:.2f}")

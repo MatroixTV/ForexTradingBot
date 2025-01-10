@@ -27,37 +27,41 @@ def calculate_xmode(series):
     rolling_std = series.rolling(window=14).std()
     return (series - rolling_mean) / rolling_std
 
-def calculate_atr(df, period=14):
-    high_low = df['High'] - df['Low']
-    high_close = np.abs(df['High'] - df['Close'].shift())
-    low_close = np.abs(df['Low'] - df['Close'].shift())
-    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    atr = tr.rolling(window=period).mean()
-    return atr
-
 def calculate_adx(df, period=14):
-    high_diff = df['High'].diff()
-    low_diff = df['Low'].diff()
-    plus_dm = np.where((high_diff > low_diff) & (high_diff > 0), high_diff, 0)
-    minus_dm = np.where((low_diff > high_diff) & (low_diff > 0), low_diff, 0)
-    tr = calculate_atr(df, 1)  # True range for single period
-    plus_di = (plus_dm.rolling(window=period).sum() / tr.rolling(window=period).sum()) * 100
-    minus_di = (minus_dm.rolling(window=period).sum() / tr.rolling(window=period).sum()) * 100
-    dx = (np.abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    high = df["High"]
+    low = df["Low"]
+    close = df["Close"]
+
+    tr1 = high - low
+    tr2 = abs(high - close.shift(1))
+    tr3 = abs(low - close.shift(1))
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+    plus_dm = high.diff()
+    minus_dm = low.diff()
+
+    plus_dm[plus_dm < 0] = 0
+    minus_dm[minus_dm > 0] = 0
+
+    tr_smooth = tr.rolling(window=period).sum()
+    plus_dm_smooth = plus_dm.rolling(window=period).sum()
+    minus_dm_smooth = minus_dm.rolling(window=period).sum()
+
+    plus_di = 100 * (plus_dm_smooth / tr_smooth)
+    minus_di = 100 * (minus_dm_smooth / tr_smooth)
+    dx = 100 * (abs(plus_di - minus_di) / (plus_di + minus_di))
+
     adx = dx.rolling(window=period).mean()
     return adx
 
 def add_indicators(df):
-    required_columns = {"High", "Low", "Close", "Volume"}
-    missing_columns = required_columns - set(df.columns)
-    if missing_columns:
-        raise KeyError(f"The dataframe is missing required columns: {missing_columns}")
+    if not all(col in df.columns for col in ["Close", "High", "Low"]):
+        raise KeyError("The dataframe must contain 'Close', 'High', and 'Low' columns.")
 
     df["RSI"] = calculate_rsi(df["Close"], 14)
     df["MACD"], df["MACD_Signal"] = calculate_macd(df["Close"])
     df["BB_Upper"], df["BB_Lower"] = calculate_bollinger_bands(df["Close"])
     df["XMODE"] = calculate_xmode(df["Close"])
-    df["ATR"] = calculate_atr(df)
     df["ADX"] = calculate_adx(df)
 
     # Forward-fill and back-fill for any remaining NaN values
