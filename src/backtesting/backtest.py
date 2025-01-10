@@ -29,53 +29,33 @@
 
 
 import pandas as pd
-from src.indicators.indicators_setup import calculate_indicators
 from src.strategies.strategy_logic import TradingStrategy
+from src.indicators.indicators_setup import calculate_indicators
 
-
-def backtest(df, initial_balance=10000):
-    balance = initial_balance
+def backtest(df):
     trades = []
-    open_position = None
-    strategy = TradingStrategy(confidence_threshold=0.7)  # Adjusted threshold
+    balance = 10000
+    strategy = TradingStrategy()
 
-    for _, row in df.iterrows():
+    for index, row in df.iterrows():
         action = strategy.trading_logic(row)
-
-        if action == "BUY" and open_position is None:
-            open_position = {
-                "action": "BUY",
-                "price": row["Close"],
-                "date": row["Date"]
-            }
-            trades.append(open_position)
-            print(f"Executed BUY at {row['Close']} on {row['Date']}")
-
-        elif action == "SELL" and open_position is not None and open_position["action"] == "BUY":
-            sell_trade = {
-                "action": "SELL",
-                "price": row["Close"],
-                "date": row["Date"]
-            }
-            trades.append(sell_trade)
-            profit = row["Close"] - open_position["price"]
-            balance += profit
-            print(f"Executed SELL at {row['Close']} on {row['Date']}. Profit: {profit:.2f}")
-            open_position = None
+        if action:
+            trades.append({"action": action, "price": row["Close"], "date": row["Date"]})
+            print(f"Trade Executed: {action} at {row['Close']} on {row['Date']}")
 
     return trades, balance
 
-
+# Main Execution
 if __name__ == "__main__":
-    # Load and preprocess data
-    df = pd.read_csv("C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv")
+    data_path = "C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv"
+    df = pd.read_csv(data_path)
     df = calculate_indicators(df)
 
-    # Perform backtest
     trades, final_balance = backtest(df)
+    print(f"Final Balance: {final_balance}")
     print(f"Total Trades: {len(trades)}")
-    print(f"Final Balance: {final_balance:.2f}")
     print(f"Trades: {trades}")
+
 
 
 # C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv

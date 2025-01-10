@@ -44,47 +44,34 @@ import pandas as pd
 
 
 class TradingStrategy:
-    def __init__(self, confidence_threshold=0.8):
-        self.confidence_threshold = confidence_threshold
+    def __init__(self):
+        self.previous_signal = None
 
     def calculate_confidence(self, row):
-        # Ensure numeric comparison
-        try:
-            confidence = 0
-            if pd.to_numeric(row["RSI"], errors="coerce") < 40 or pd.to_numeric(row["RSI"], errors="coerce") > 60:
-                confidence += 0.3
-            if pd.to_numeric(row["MACD"], errors="coerce") > pd.to_numeric(row["MACD_Signal"], errors="coerce"):
-                confidence += 0.3
-            if pd.to_numeric(row["RTD_Trend"], errors="coerce") > 0:
-                confidence += 0.4
-            return confidence
-        except (KeyError, TypeError, ValueError) as e:
-            print(f"Error in calculate_confidence: {e}")
-            return 0  # Return zero confidence for invalid rows
+        # Confidence based on RTD, MACD, and RSI
+        confidence = 0
+        if row["RTD_Trend"] > 0:
+            confidence += 0.4
+        if row["MACD"] > row["MACD_Signal"]:
+            confidence += 0.3
+        if 30 < row["RSI"] < 70:
+            confidence += 0.3
+        return confidence
 
     def trading_logic(self, row):
         try:
-            # Extract indicators
-            rsi = row["RSI"]
-            macd = row["MACD"]
-            macd_signal = row["MACD_Signal"]
-            rtd_trend = row["RTD_Trend"]
-
-            # Calculate confidence
             confidence = self.calculate_confidence(row)
+            print(f"Confidence: {confidence}, RTD_Trend: {row['RTD_Trend']}, RSI: {row['RSI']}, MACD: {row['MACD']}")
 
-            # Debugging metrics
-            print(f"RSI: {rsi}, MACD: {macd}, MACD_Signal: {macd_signal}, RTD_Trend: {rtd_trend}")
-            print(f"Confidence: {confidence}")
-
-            # Determine actions
-            if confidence >= self.confidence_threshold:
-                if macd > macd_signal and rtd_trend > 0:
+            if confidence >= 0.6:
+                if self.previous_signal != "BUY":
+                    self.previous_signal = "BUY"
                     return "BUY"
-                elif macd < macd_signal and rtd_trend < 0:
+            elif confidence <= 0.4:
+                if self.previous_signal != "SELL":
+                    self.previous_signal = "SELL"
                     return "SELL"
-
-            return "HOLD"  # Default action
-        except KeyError as e:
-            print(f"Error in trading_logic: Missing column {e}")
-            return "HOLD"
+            return None
+        except Exception as e:
+            print(f"Error in trading_logic: {e}")
+            return None

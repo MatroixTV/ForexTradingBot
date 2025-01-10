@@ -74,30 +74,35 @@
 
 import pandas as pd
 from ta.momentum import RSIIndicator
-from ta.trend import MACD, SMAIndicator
+from ta.trend import MACD
 from ta.volatility import BollingerBands
+from src.indicators.custom_indicators import calculate_rtd, calculate_mama_fama
 
 def calculate_indicators(df):
-    """Calculate and add indicators to the DataFrame."""
-    df['RSI'] = RSIIndicator(df['Close']).rsi()
-    macd = MACD(df['Close'])
-    df['MACD'] = macd.macd()
-    df['MACD_Signal'] = macd.macd_signal()
-    bb = BollingerBands(df['Close'])
-    df['BB_Upper'] = bb.bollinger_hband()
-    df['BB_Lower'] = bb.bollinger_lband()
-    df['SMA'] = SMAIndicator(df['Close'], window=50).sma_indicator()
+    # RSI
+    df["RSI"] = RSIIndicator(close=df["Close"], window=14).rsi()
 
-    # Adjust RTD_Trend logic
-    df['RTD_Trend'] = df['SMA'] > df['Close']
-    df['RTD_Trend'] = df['RTD_Trend'].apply(lambda x: 'UP' if x else 'DOWN')
+    # MACD
+    macd = MACD(close=df["Close"])
+    df["MACD"] = macd.macd()
+    df["MACD_Signal"] = macd.macd_signal()
 
+    # Bollinger Bands
+    bb = BollingerBands(close=df["Close"])
+    df["BB_Upper"] = bb.bollinger_hband()
+    df["BB_Lower"] = bb.bollinger_lband()
+
+    # ATR
+    df["ATR"] = df["High"] - df["Low"]
+
+    # MAMA and FAMA
+    df["MAMA"], df["FAMA"] = calculate_mama_fama(df["Close"])
+
+    # RTD Trend
+    df["RTD_Trend"] = calculate_rtd(df)
+
+    # Fill NaN values
     df.fillna(method='bfill', inplace=True)
     df.fillna(method='ffill', inplace=True)
-    # Cast calculated columns to numeric
-    numeric_columns = ["RSI", "MACD", "MACD_Signal", "BB_Upper", "BB_Lower", "ATR", "MAMA", "FAMA", "RTD_Trend"]
-    for col in numeric_columns:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     return df
