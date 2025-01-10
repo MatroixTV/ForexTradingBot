@@ -71,3 +71,11 @@ def check_maw(data):
     if rolling_mean.iloc[-1] > data['Close'].iloc[-1]:
         return True  # or some other logic
     return False
+
+def calculate_maw_signals(row):
+    # Example signal logic
+    if row["MACD"] > row["MACD_Signal"]:
+        return "CONFIRM"
+    else:
+        return "HOLD"
+

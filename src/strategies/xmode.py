@@ -91,3 +91,13 @@ def x_mode_check(dataframe):
 
     print(f"No signal: Price {latest_data['Close']} within range")
     return False  # If no signal, return False
+
+
+def calculate_xmode_signals(row):
+    # Example signal logic
+    if row["Close"] > row["BB_Upper"]:
+        return "SELL"
+    elif row["Close"] < row["BB_Lower"]:
+        return "BUY"
+    else:
+        return "HOLD"

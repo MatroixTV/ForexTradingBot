@@ -103,3 +103,13 @@ if __name__ == "__main__":
     # Instantiate and run MESA Algorithm
     mesa = MESAAlgorithm()
     mesa.run(data)
+
+
+def calculate_rtd_signals(row):
+    # Example signal logic
+    if row["RTD_Trend"] == "UP":
+        return "UP"
+    elif row["RTD_Trend"] == "DOWN":
+        return "DOWN"
+    else:
+        return "HOLD"
