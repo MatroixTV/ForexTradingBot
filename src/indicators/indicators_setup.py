@@ -74,8 +74,8 @@
 import numpy as np
 import pandas as pd
 from ta.momentum import RSIIndicator
-from ta.volatility import BollingerBands
-from ta.trend import MACD, AverageTrueRange
+from ta.volatility import BollingerBands, AverageTrueRange  # Corrected Import
+from ta.trend import MACD
 
 
 def calculate_indicators(df):
