@@ -39,60 +39,26 @@
 #
 #     return signal, sl, tp
 
-
+import joblib
+import numpy as np
 import pandas as pd
 
 class TradingStrategy:
-    def __init__(self, df):
-        """
-        Initialize the trading strategy with the DataFrame and configuration.
-        """
-        self.df = df
-        self.buy_threshold_rsi = 40  # Buy when RSI < this value
-        self.sell_threshold_rsi = 60  # Sell when RSI > this value
-        self.macd_signal_diff = 0  # Positive MACD difference for buy, negative for sell
-        self.rtd_positive = 0  # RTD Trend threshold for buy
-        self.rtd_negative = 0  # RTD Trend threshold for sell
+    def __init__(self):
+        # Load trained model
+        self.model = joblib.load('trade_decision_model.pkl')
 
     def trading_logic(self, row):
         """
-        Define the trading logic for a single row of data.
-        Returns "BUY", "SELL", or None.
+        Predict trade action using the trained model.
         """
-        try:
-            # Extract necessary indicators
-            rsi = row["RSI"]
-            macd = row["MACD"]
-            macd_signal = row["MACD_Signal"]
-            rtd_trend = row["RTD_Trend"]
+        features = np.array([row[f'{indicator}_lag_{lag}'] for indicator in ['RSI', 'MACD', 'RTD_Trend'] for lag in range(1, 4)])
+        prediction = self.model.predict(features.reshape(1, -1))[0]
 
-            # Debugging output
-            print(
-                f"Evaluating row: RSI={rsi}, MACD={macd}, MACD_Signal={macd_signal}, RTD_Trend={rtd_trend}"
-            )
-
-            # Trading logic conditions
-            if (
-                rsi < self.buy_threshold_rsi
-                and macd > macd_signal
-                and rtd_trend > self.rtd_positive
-            ):
-                print("BUY signal triggered.")
-                return "BUY"
-            elif (
-                rsi > self.sell_threshold_rsi
-                and macd < macd_signal
-                and rtd_trend < self.rtd_negative
-            ):
-                print("SELL signal triggered.")
-                return "SELL"
-            else:
-                print("No trade signal triggered.")
-                return None
-
-        except KeyError as e:
-            print(f"Error in trading_logic: Missing key {e}")
-            return None
+        if prediction == 1:
+            return "BUY"
+        else:
+            return "SELL"
 
     def calculate_confidence(self, row):
         """
