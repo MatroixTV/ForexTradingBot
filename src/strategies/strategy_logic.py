@@ -46,28 +46,27 @@ from src.strategies.MAW import calculate_maw_signals
 from src.strategies.RTD import calculate_rtd_signals
 
 class TradingStrategy:
-    def __init__(self):
-        print("Initializing Trading Strategy with xmode, MAW, and RTD...")
+    def __init__(self, indicators):
+        self.indicators = indicators
 
     def trading_logic(self, row):
-        """
-        Defines the trading logic using xmode, MAW, and RTD outputs.
-        """
         try:
-            # xmode-based signal
-            xmode_signal = calculate_xmode_signals(row)
-            # MAW-based signal
-            maw_signal = calculate_maw_signals(row)
-            # RTD-based signal
-            rtd_signal = calculate_rtd_signals(row)
+            rsi = row["RSI"]
+            macd = row["MACD"]
+            macd_signal = row["MACD_Signal"]
+            rtd_trend = row["RTD_Trend"]
 
-            # Aggregating signals for buy/sell decisions
-            if xmode_signal == "BUY" and maw_signal == "CONFIRM" and rtd_signal == "UP":
+            print(f"Debug: RSI={rsi}, MACD={macd}, MACD_Signal={macd_signal}, RTD_Trend={rtd_trend}")
+
+            if pd.isna(rsi) or pd.isna(macd) or pd.isna(macd_signal) or pd.isna(rtd_trend):
+                return None
+
+            if rsi < 35 and macd > macd_signal and rtd_trend == 1:
                 return "BUY"
-            elif xmode_signal == "SELL" and maw_signal == "CONFIRM" and rtd_signal == "DOWN":
+            elif rsi > 65 and macd < macd_signal and rtd_trend == -1:
                 return "SELL"
             else:
-                return "HOLD"
+                return None
         except Exception as e:
             print(f"Error in trading_logic: {e}")
-            return "HOLD"
+            return None
