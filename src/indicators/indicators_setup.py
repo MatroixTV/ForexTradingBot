@@ -93,8 +93,8 @@ def calculate_indicators(df):
         # Calculate RTD Trend
         df["RTD_Trend"] = df["Close"].diff().rolling(window=14).sum()
 
-        df.fillna(method="bfill", inplace=True)
-        df.fillna(method="ffill", inplace=True)
+        df.bfill(inplace=True)
+        df.ffill(inplace=True)
 
         print(f"Indicators calculated: {list(df.columns)}")
         return df

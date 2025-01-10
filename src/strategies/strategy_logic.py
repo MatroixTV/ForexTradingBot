@@ -52,13 +52,16 @@ class TradingStrategy:
             rsi = row["RSI"]
             macd = row["MACD"]
             rtd = row["RTD_Trend"]
+            print(f"Evaluating row: RSI={rsi}, MACD={macd}, RTD_Trend={rtd}")
 
             if pd.isna(rsi) or pd.isna(macd) or pd.isna(rtd):
                 return None
 
-            if rsi < 30 and rtd > 0:
+            if rsi < 40 and rtd > 0:  # Adjusted threshold
+                print("BUY signal triggered.")
                 return "BUY"
-            elif rsi > 70 and rtd < 0:
+            elif rsi > 60 and rtd < 0:  # Adjusted threshold
+                print("SELL signal triggered.")
                 return "SELL"
             else:
                 return None

@@ -41,6 +41,7 @@ def backtest(df):
 
     for index, row in df.iterrows():
         action = strategy.trading_logic(row)
+        print(f"Index: {index}, Action: {action}")
         if action == "BUY" and position is None:
             position = {"entry_price": row["Close"], "entry_date": row["Date"]}
             trades.append({"action": "BUY", "price": row["Close"], "date": row["Date"]})
@@ -56,6 +57,7 @@ if __name__ == "__main__":
     # Load and calculate indicators
     df = pd.read_csv("C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv")
     df = calculate_indicators(df)
+    print(df[["RSI", "MACD", "MACD_Signal", "RTD_Trend"]].tail())
 
     # Run backtest
     trades, final_balance = backtest(df)
