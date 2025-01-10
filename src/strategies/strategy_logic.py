@@ -44,50 +44,21 @@ import pandas as pd
 
 class TradingStrategy:
     def __init__(self):
-        self.position = None  # Track current position (e.g., "BUY", "SELL")
+        pass
 
     def trading_logic(self, row):
-        """
-        Determine trade action based on indicators.
-        """
         try:
-            rsi = row["RSI"]
-            macd = row["MACD"]
-            macd_signal = row["MACD_Signal"]
-            rtd_trend = row["RTD_Trend"]
-            atr = row["ATR"]
+            rsi = row['RSI']
+            macd = row['MACD']
+            macd_signal = row['MACD_Signal']
+            rtd_trend = row['RTD_Trend']
 
-            # Compute confidence metric
-            confidence = (
-                0.3 * (rsi < 30) +  # Oversold
-                0.4 * (macd > macd_signal) +  # MACD bullish crossover
-                0.3 * (rtd_trend == "BUY")  # RTD trend alignment
-            )
+            print(f"RSI: {rsi}, MACD: {macd}, MACD_Signal: {macd_signal}, RTD_Trend: {rtd_trend}")
 
-            # Dynamic thresholds
-            stop_loss = row["Close"] - 1.5 * atr
-            take_profit = row["Close"] + 2.0 * atr
-
-            # Decide action based on confidence
-            if confidence >= 0.7 and self.position != "BUY":
-                self.position = "BUY"
-                return {
-                    "action": "BUY",
-                    "price": row["Close"],
-                    "date": row["Date"],
-                    "stop_loss": stop_loss,
-                    "take_profit": take_profit
-                }
-            elif confidence <= 0.3 and self.position != "SELL":
-                self.position = "SELL"
-                return {
-                    "action": "SELL",
-                    "price": row["Close"],
-                    "date": row["Date"],
-                    "stop_loss": stop_loss,
-                    "take_profit": take_profit
-                }
-
-        except Exception as e:
-            print(f"Error in trading_logic: {e}")
-        return None
+            if rsi < 40 and macd > macd_signal and rtd_trend == 'UP':
+                return 'BUY', 0.8
+            elif rsi > 60 and macd < macd_signal and rtd_trend == 'DOWN':
+                return 'SELL', 0.8
+        except KeyError as e:
+            print(f"Error in trading_logic: Missing key {e}")
+        return None, 0

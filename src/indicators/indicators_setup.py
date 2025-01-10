@@ -73,29 +73,25 @@
 
 
 import pandas as pd
-import ta
+from ta.momentum import RSIIndicator
+from ta.trend import MACD, SMAIndicator
+from ta.volatility import BollingerBands
 
-def compute_indicators(df):
-    """
-    Computes indicators such as MACD, Signal Line, EMA, RSI, ATR, and RTD Trend.
-    """
-    # Ensure required columns are present
-    required_columns = ['Close', 'High', 'Low']
-    for col in required_columns:
-        if col not in df.columns:
-            raise ValueError(f"Missing required column: {col}")
+def calculate_indicators(df):
+    """Calculate and add indicators to the DataFrame."""
+    df['RSI'] = RSIIndicator(df['Close']).rsi()
+    macd = MACD(df['Close'])
+    df['MACD'] = macd.macd()
+    df['MACD_Signal'] = macd.macd_signal()
+    bb = BollingerBands(df['Close'])
+    df['BB_Upper'] = bb.bollinger_hband()
+    df['BB_Lower'] = bb.bollinger_lband()
+    df['SMA'] = SMAIndicator(df['Close'], window=50).sma_indicator()
 
-    # MACD
-    df['MACD'] = ta.trend.MACD(df['Close'], window_slow=26, window_fast=12, window_sign=9).macd()
-    df['MACD_Signal'] = ta.trend.MACD(df['Close'], window_slow=26, window_fast=12, window_sign=9).macd_signal()
+    # Adjust RTD_Trend logic
+    df['RTD_Trend'] = df['SMA'] > df['Close']
+    df['RTD_Trend'] = df['RTD_Trend'].apply(lambda x: 'UP' if x else 'DOWN')
 
-    # RSI
-    df['RSI'] = ta.momentum.RSIIndicator(df['Close'], window=14).rsi()
-
-    # ATR
-    df['ATR'] = ta.volatility.AverageTrueRange(df['High'], df['Low'], df['Close'], window=14).average_true_range()
-
-    # RTD Trend (Placeholder: Replace with actual RTD Trend calculation)
-    df['RTD_Trend'] = 'HOLD'  # Example placeholder value
-
+    df.fillna(method='bfill', inplace=True)
+    df.fillna(method='ffill', inplace=True)
     return df

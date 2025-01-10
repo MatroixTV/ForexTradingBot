@@ -30,52 +30,61 @@
 
 import pandas as pd
 from src.strategies.strategy_logic import TradingStrategy
-from src.indicators.indicators_setup import compute_indicators
-import logging
+from src.indicators.indicators_setup import calculate_indicators
+
+
+def analyze_performance(trades, final_balance, initial_balance):
+    """Calculate and log performance metrics."""
+    total_trades = len(trades)
+    profit_trades = [t for t in trades if t['action'] == 'SELL' and t['profit'] > 0]
+    loss_trades = [t for t in trades if t['action'] == 'SELL' and t['profit'] <= 0]
+
+    win_rate = len(profit_trades) / total_trades * 100 if total_trades > 0 else 0
+    total_profit = sum([t['profit'] for t in profit_trades])
+    total_loss = sum([t['profit'] for t in loss_trades])
+
+    print(f"Total Trades: {total_trades}")
+    print(f"Winning Trades: {len(profit_trades)}, Win Rate: {win_rate:.2f}%")
+    print(f"Profit: {total_profit:.2f}, Loss: {total_loss:.2f}")
+    print(f"Final Balance: {final_balance:.2f}, P/L: {final_balance - initial_balance:.2f}")
 
 
 def backtest(data):
-    strategy = TradingStrategy()
+    """Run the backtesting simulation."""
+    initial_balance = 10000
+    balance = initial_balance
     trades = []
-    balance = 10000  # Starting balance
-    position = None
-    entry_price = 0
+
+    strategy = TradingStrategy()
 
     for index, row in data.iterrows():
-        action = strategy.trading_logic(row)
-        if action:
-            trades.append(action)
-            if action["action"] == "BUY" and position != "LONG":
-                position = "LONG"
-                entry_price = action["price"]
-                balance -= entry_price
-                print(f"BUY at {entry_price} on {action['date']}")
-            elif action["action"] == "SELL" and position == "LONG":
-                position = None
-                exit_price = action["price"]
-                balance += exit_price
-                profit = exit_price - entry_price
-                print(f"SELL at {exit_price} on {action['date']}, Profit: {profit}")
+        action, confidence = strategy.trading_logic(row)
+        print(f"Row {index} Action: {action}, Confidence: {confidence}")
 
-    # Analyze performance
-    analyze_performance(trades, balance)
+        if action == 'BUY':
+            trades.append({'action': 'BUY', 'price': row['Close'], 'date': row['Date'], 'confidence': confidence})
+        elif action == 'SELL' and trades:
+            buy_trade = trades.pop()
+            profit = row['Close'] - buy_trade['price']
+            balance += profit
+            trades.append({
+                'action': 'SELL',
+                'price': row['Close'],
+                'date': row['Date'],
+                'profit': profit,
+                'confidence': confidence
+            })
 
-def analyze_performance(trades, balance):
-    if not trades:
-        print("No trades executed.")
-        return
+    analyze_performance(trades, balance, initial_balance)
+    return trades, balance
 
-    profits = [trade["price"] for trade in trades if trade["action"] == "SELL"]
-    if profits:
-        max_drawdown = max(profits) - min(profits)
-        sharpe_ratio = (sum(profits) / len(profits)) / (max_drawdown if max_drawdown != 0 else 1)
-    else:
-        max_drawdown = 0
-        sharpe_ratio = 0
 
-    print(f"Final Balance: {balance}")
-    print(f"Sharpe Ratio: {sharpe_ratio}")
 
+if __name__ == "__main__":
+    file_path = "C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv"
+    df = pd.read_csv(file_path)
+    df = calculate_indicators(df)
+    trades, final_balance = backtest(df)
 
 
 
