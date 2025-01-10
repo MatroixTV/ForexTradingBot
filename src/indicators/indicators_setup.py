@@ -113,8 +113,8 @@ def calculate_indicators(df):
     df["RTD_Trend"] = np.where(df["RSI"] > 50, "UP", "DOWN")
 
     # Fill missing values
-    df.fillna(method="bfill", inplace=True)
-    df.fillna(method="ffill", inplace=True)
+    df.bfill(inplace=True)
+    df.ffill(inplace=True)
 
     print(f"Indicators calculated: {list(df.columns)}")
     return df.reset_index()
