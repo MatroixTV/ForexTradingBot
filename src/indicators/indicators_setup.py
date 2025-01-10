@@ -94,4 +94,10 @@ def calculate_indicators(df):
 
     df.fillna(method='bfill', inplace=True)
     df.fillna(method='ffill', inplace=True)
+    # Cast calculated columns to numeric
+    numeric_columns = ["RSI", "MACD", "MACD_Signal", "BB_Upper", "BB_Lower", "ATR", "MAMA", "FAMA", "RTD_Trend"]
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
     return df

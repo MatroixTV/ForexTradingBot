@@ -48,15 +48,19 @@ class TradingStrategy:
         self.confidence_threshold = confidence_threshold
 
     def calculate_confidence(self, row):
-        # Base confidence on multiple indicators
-        confidence = 0
-        if row["RSI"] < 40 or row["RSI"] > 60:  # Adjusted RSI thresholds
-            confidence += 0.3
-        if row["MACD"] > row["MACD_Signal"]:
-            confidence += 0.3
-        if row["RTD_Trend"] > 0:  # Favorable RTD trend
-            confidence += 0.4
-        return confidence
+        # Ensure numeric comparison
+        try:
+            confidence = 0
+            if pd.to_numeric(row["RSI"], errors="coerce") < 40 or pd.to_numeric(row["RSI"], errors="coerce") > 60:
+                confidence += 0.3
+            if pd.to_numeric(row["MACD"], errors="coerce") > pd.to_numeric(row["MACD_Signal"], errors="coerce"):
+                confidence += 0.3
+            if pd.to_numeric(row["RTD_Trend"], errors="coerce") > 0:
+                confidence += 0.4
+            return confidence
+        except (KeyError, TypeError, ValueError) as e:
+            print(f"Error in calculate_confidence: {e}")
+            return 0  # Return zero confidence for invalid rows
 
     def trading_logic(self, row):
         try:
