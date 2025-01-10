@@ -41,34 +41,31 @@
 
 
 import numpy as np
-
+import pandas as pd
 
 class TradingStrategy:
     def __init__(self, df):
-        """
-        Initialize TradingStrategy with the DataFrame containing indicators.
-        :param df: DataFrame with calculated indicators.
-        """
         self.df = df
 
     def trading_logic(self, row):
-        """
-        Define trading logic using indicators and signals.
-        :param row: Single row of DataFrame.
-        :return: Signal ('BUY', 'SELL', or None).
-        """
         try:
-            rsi, macd, macd_signal = row['RSI'], row['MACD'], row['MACD_Signal']
-            xmode_signal, rtd_trend, maw_oscillator = row['XMode_Signal'], row['RTD_Trend'], row['MAW_Oscillator']
+            rsi = row["RSI"]
+            macd = row["MACD"]
+            rtd = row["RTD_Trend"]
 
-            # Example trading logic
-            if xmode_signal == 1 and rtd_trend > 0 and maw_oscillator > 1:
-                return 'BUY'
-            elif xmode_signal == -1 and rtd_trend < 0 and maw_oscillator < -1:
-                return 'SELL'
+            if pd.isna(rsi) or pd.isna(macd) or pd.isna(rtd):
+                return None
+
+            if rsi < 30 and rtd > 0:
+                return "BUY"
+            elif rsi > 70 and rtd < 0:
+                return "SELL"
+            else:
+                return None
         except Exception as e:
             print(f"Error in trading_logic: {e}")
-        return None
+            return None
+
 
     def calculate_confidence(self, row):
         """

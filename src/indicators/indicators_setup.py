@@ -74,51 +74,30 @@
 import pandas as pd
 from ta.momentum import RSIIndicator
 from ta.trend import MACD
-from src.indicators.xmode import XMode
-from src.indicators.rtd import RTD
-from src.indicators.maw import MAW
-
 
 def calculate_indicators(df):
-    """
-    Calculate technical indicators and append them to the DataFrame.
-    :param df: DataFrame with OHLCV data.
-    :return: DataFrame with calculated indicators.
-    """
-    # Calculate RSI
-    rsi_indicator = RSIIndicator(close=df['Close'], window=14)
-    df['RSI'] = rsi_indicator.rsi()
+    try:
+        # Ensure Date is a datetime
+        df["Date"] = pd.to_datetime(df["Date"])
+        df.set_index("Date", inplace=True)
 
-    # Calculate MACD and Signal Line
-    macd = MACD(close=df['Close'], window_slow=26, window_fast=12, window_sign=9)
-    df['MACD'] = macd.macd()
-    df['MACD_Signal'] = macd.macd_signal()
+        # Calculate RSI
+        rsi_indicator = RSIIndicator(df["Close"])
+        df["RSI"] = rsi_indicator.rsi()
 
-    # Calculate Bollinger Bands
-    df['BB_Upper'] = df['Close'].rolling(window=20).mean() + 2 * df['Close'].rolling(window=20).std()
-    df['BB_Lower'] = df['Close'].rolling(window=20).mean() - 2 * df['Close'].rolling(window=20).std()
+        # Calculate MACD
+        macd_indicator = MACD(df["Close"])
+        df["MACD"] = macd_indicator.macd()
+        df["MACD_Signal"] = macd_indicator.macd_signal()
 
-    # Calculate ATR
-    df['ATR'] = df['High'] - df['Low']
+        # Calculate RTD Trend
+        df["RTD_Trend"] = df["Close"].diff().rolling(window=14).sum()
 
-    # Calculate XMode Levels
-    xmode = XMode(df)
-    xmode_levels = xmode.calculate_levels()
-    df = pd.concat([df, xmode_levels], axis=1)
+        df.fillna(method="bfill", inplace=True)
+        df.fillna(method="ffill", inplace=True)
 
-    # Calculate RTD
-    rtd = RTD(df)
-    rtd_values = rtd.calculate_rtd()
-    df = pd.concat([df, rtd_values], axis=1)
-
-    # Calculate MAW
-    maw = MAW(df)
-    maw_values = maw.calculate_maw()
-    df = pd.concat([df, maw_values], axis=1)
-
-    # Fill NaN values
-    df.fillna(method="bfill", inplace=True)
-    df.fillna(method="ffill", inplace=True)
-
-    print(f"Indicators calculated: {list(df.columns)}")
-    return df
+        print(f"Indicators calculated: {list(df.columns)}")
+        return df
+    except Exception as e:
+        print(f"Error calculating indicators: {e}")
+        return df

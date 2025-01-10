@@ -29,32 +29,39 @@
 
 
 import pandas as pd
-from src.strategies.strategy_logic import TradingStrategy
 from src.indicators.indicators_setup import calculate_indicators
+from src.strategies.strategy_logic import TradingStrategy
 
 def backtest(df):
     trades = []
-    balance = 10000
-    strategy = TradingStrategy()
+    initial_balance = 10000
+    balance = initial_balance
+    position = None
+    strategy = TradingStrategy(df)  # Pass the DataFrame as an argument
 
     for index, row in df.iterrows():
         action = strategy.trading_logic(row)
-        if action:
-            trades.append({"action": action, "price": row["Close"], "date": row["Date"]})
-            print(f"Trade Executed: {action} at {row['Close']} on {row['Date']}")
+        if action == "BUY" and position is None:
+            position = {"entry_price": row["Close"], "entry_date": row["Date"]}
+            trades.append({"action": "BUY", "price": row["Close"], "date": row["Date"]})
+        elif action == "SELL" and position is not None:
+            profit = row["Close"] - position["entry_price"]
+            balance += profit
+            trades.append({"action": "SELL", "price": row["Close"], "date": row["Date"], "profit": profit})
+            position = None
 
     return trades, balance
 
-# Main Execution
 if __name__ == "__main__":
-    data_path = "C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv"
-    df = pd.read_csv(data_path)
+    # Load and calculate indicators
+    df = pd.read_csv("C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv")
     df = calculate_indicators(df)
 
+    # Run backtest
     trades, final_balance = backtest(df)
-    print(f"Final Balance: {final_balance}")
     print(f"Total Trades: {len(trades)}")
-    print(f"Trades: {trades}")
+    print(f"Final Balance: {final_balance:.2f}")
+    print("Trades:", trades)
 
 
 
