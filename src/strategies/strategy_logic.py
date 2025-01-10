@@ -42,23 +42,45 @@
 
 import pandas as pd
 
+
 class TradingStrategy:
-    def __init__(self):
-        pass
+    def __init__(self, confidence_threshold=0.8):
+        self.confidence_threshold = confidence_threshold
+
+    def calculate_confidence(self, row):
+        # Base confidence on multiple indicators
+        confidence = 0
+        if row["RSI"] < 40 or row["RSI"] > 60:  # Adjusted RSI thresholds
+            confidence += 0.3
+        if row["MACD"] > row["MACD_Signal"]:
+            confidence += 0.3
+        if row["RTD_Trend"] > 0:  # Favorable RTD trend
+            confidence += 0.4
+        return confidence
 
     def trading_logic(self, row):
         try:
-            rsi = row['RSI']
-            macd = row['MACD']
-            macd_signal = row['MACD_Signal']
-            rtd_trend = row['RTD_Trend']
+            # Extract indicators
+            rsi = row["RSI"]
+            macd = row["MACD"]
+            macd_signal = row["MACD_Signal"]
+            rtd_trend = row["RTD_Trend"]
 
+            # Calculate confidence
+            confidence = self.calculate_confidence(row)
+
+            # Debugging metrics
             print(f"RSI: {rsi}, MACD: {macd}, MACD_Signal: {macd_signal}, RTD_Trend: {rtd_trend}")
+            print(f"Confidence: {confidence}")
 
-            if rsi < 40 and macd > macd_signal and rtd_trend == 'UP':
-                return 'BUY', 0.8
-            elif rsi > 60 and macd < macd_signal and rtd_trend == 'DOWN':
-                return 'SELL', 0.8
+            # Determine actions
+            if confidence >= self.confidence_threshold:
+                if macd > macd_signal and rtd_trend > 0:
+                    return "BUY"
+                elif macd < macd_signal and rtd_trend < 0:
+                    return "SELL"
+
+            return "HOLD"  # Default action
         except KeyError as e:
-            print(f"Error in trading_logic: Missing key {e}")
-        return None, 0
+            print(f"Error in trading_logic: Missing column {e}")
+            return "HOLD"
