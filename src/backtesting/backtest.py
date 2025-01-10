@@ -27,44 +27,51 @@
 # final_balance = backtest(data)
 #
 
+
 import pandas as pd
-from src.indicators.indicators_setup import calculate_indicators
 from src.strategies.strategy_logic import TradingStrategy
+from src.indicators.indicators_setup import calculate_indicators
 
-def backtest(data):
-    """
-    Backtests the strategy using the TradingStrategy class.
-    """
-    strategy = TradingStrategy()
-    trades = []
-    balance = 10000  # Starting balance
-    position = None
+class Backtester:
+    def __init__(self, initial_balance=10000):
+        self.balance = initial_balance
+        self.trades = []
 
-    for _, row in data.iterrows():
-        signal = strategy.trading_logic(row)
+    def log_trade(self, action, price, date):
+        self.trades.append({"action": action, "price": price, "date": date})
+        print(f"Trade executed: {action} at {price} on {date}")
 
-        if signal == "BUY" and position is None:
-            position = {"price": row["Close"], "type": "BUY"}
-            trades.append({"action": "BUY", "price": row["Close"], "date": row["Date"]})
-        elif signal == "SELL" and position and position["type"] == "BUY":
-            profit = row["Close"] - position["price"]
-            balance += profit
-            trades.append({"action": "SELL", "price": row["Close"], "date": row["Date"]})
-            position = None
+    def backtest(self, df):
+        strategy = TradingStrategy()
+        for _, row in df.iterrows():
+            signal = strategy.trading_logic(row)
+            if signal == "BUY":
+                self.log_trade("BUY", row["Close"], row["Date"])
+            elif signal == "SELL":
+                self.log_trade("SELL", row["Close"], row["Date"])
+        return self.trades, self.balance
 
-    print(f"Final Balance: {balance}")
-    print(f"Trades: {trades}")
-    return trades, balance
-
+    def analyze_performance(self):
+        print(f"Final Balance: {self.balance}")
+        print(f"Total Trades: {len(self.trades)}")
+        print(f"Trades: {self.trades}")
 
 if __name__ == "__main__":
-    # Load and process data
+    # Load data
     data_path = "C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv"
     df = pd.read_csv(data_path)
+
+    # Calculate indicators
     df = calculate_indicators(df)
 
+    # Initialize backtester
+    backtester = Backtester()
+
     # Run backtest
-    trades, final_balance = backtest(df)
+    trades, final_balance = backtester.backtest(df)
+
+    # Analyze performance
+    backtester.analyze_performance()
 
 
 # C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv
