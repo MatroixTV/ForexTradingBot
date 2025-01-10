@@ -31,29 +31,24 @@
 import pandas as pd
 from src.strategies.strategy_logic import TradingStrategy
 from src.indicators.indicators_setup import calculate_indicators
+import logging
 
 
-def backtest(data):
-    strategy = TradingStrategy(indicators=["RSI", "MACD", "MACD_Signal", "RTD_Trend"])
+def backtest(df):
     trades = []
     balance = 10000
-    position = None
+    strategy = TradingStrategy()
 
-    for i, row in data.iterrows():
-        signal = strategy.trading_logic(row)
+    for _, row in df.iterrows():
+        action = strategy.trading_logic(row)
+        if action:
+            trade = {"action": action, "price": row["Close"], "date": row["Date"]}
+            trades.append(trade)
+            logging.info(f"Executed trade: {trade}")
 
-        if signal == "BUY" and position is None:
-            position = {"entry_price": row["Close"], "entry_date": row["Date"]}
-            trades.append({"action": "BUY", "price": row["Close"], "date": row["Date"]})
-            print(f"BUY at {row['Close']} on {row['Date']}")
-
-        elif signal == "SELL" and position:
-            profit = row["Close"] - position["entry_price"]
-            balance += profit
-            trades.append({"action": "SELL", "price": row["Close"], "date": row["Date"]})
-            print(f"SELL at {row['Close']} on {row['Date']} | Profit: {profit:.2f}")
-            position = None
-
+    # Logging total trades
+    logging.info(f"Total trades: {len(trades)}")
+    logging.info(f"Final balance: {balance}")
     return trades, balance
 
 
