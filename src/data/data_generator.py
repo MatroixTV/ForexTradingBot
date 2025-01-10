@@ -1,35 +1,25 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
-
-def generate_dataset(df):
+def generate_training_data(input_file, output_file):
     """
-    Generate dataset for supervised learning.
+    Generates a training dataset with features and targets for supervised ML.
     """
-    # Include indicators as features
-    features = ['RSI', 'MACD', 'MACD_Signal', 'RTD_Trend']
-    df = df[features + ['Close']]
+    # Load the processed data
+    df = pd.read_csv(input_file)
 
-    # Create lagged features
-    for feature in features:
-        for lag in range(1, 4):
-            df[f'{feature}_lag_{lag}'] = df[feature].shift(lag)
+    # Feature engineering
+    df['RSI_Squared'] = df['RSI'] ** 2
+    df['MACD_Signal_Diff'] = df['MACD'] - df['MACD_Signal']
 
-    # Define target (1: profitable trade, 0: loss)
-    df['target'] = (df['Close'].shift(-1) > df['Close']).astype(int)
+    # Assign target based on trading conditions
+    df['Target'] = 0  # Default: No trade
+    df.loc[(df['RSI'] < 30) & (df['RTD_Trend'] > 0), 'Target'] = 1  # Buy
+    df.loc[(df['RSI'] > 70) & (df['RTD_Trend'] < 0), 'Target'] = -1  # Sell
 
-    # Drop rows with NaN values (due to lagging)
-    df.dropna(inplace=True)
-
-    # Save dataset
-    df.to_csv('training_dataset.csv', index=False)
-    print("Dataset saved to training_dataset.csv")
-    return df
-
+    # Save the training dataset
+    features = ['RSI', 'MACD', 'MACD_Signal', 'RTD_Trend', 'RSI_Squared', 'MACD_Signal_Diff']
+    df[features + ['Target']].to_csv(output_file, index=False)
+    print(f"Training dataset saved to {output_file}")
 
 if __name__ == "__main__":
-    from src.indicators.indicators_setup import calculate_indicators
-
-    df = pd.read_csv('C:/Users/ismac/PycharmProjects/forex_trading_bot/data/EURUSD.csv')
-    df = calculate_indicators(df)
-    generate_dataset(df)
+    generate_training_data("processed_data.csv", "training_dataset.csv")

@@ -44,21 +44,30 @@ import numpy as np
 import pandas as pd
 
 class TradingStrategy:
-    def __init__(self):
-        # Load trained model
-        self.model = joblib.load('trade_decision_model.pkl')
+    def __init__(self, df):
+        """
+        Initializes the trading strategy with a trained model.
+        """
+        self.df = df
+        self.model = joblib.load("trade_decision_model.pkl")
+        self.features = ['RSI', 'MACD', 'MACD_Signal', 'RTD_Trend', 'RSI_Squared', 'MACD_Signal_Diff']
 
     def trading_logic(self, row):
         """
-        Predict trade action using the trained model.
+        Makes trade decisions using the trained model.
         """
-        features = np.array([row[f'{indicator}_lag_{lag}'] for indicator in ['RSI', 'MACD', 'RTD_Trend'] for lag in range(1, 4)])
-        prediction = self.model.predict(features.reshape(1, -1))[0]
+        # Prepare input features for the model
+        feature_values = np.array([row[feature] for feature in self.features]).reshape(1, -1)
+
+        # Predict action: 1 = Buy, -1 = Sell, 0 = No action
+        prediction = self.model.predict(feature_values)[0]
 
         if prediction == 1:
             return "BUY"
-        else:
+        elif prediction == -1:
             return "SELL"
+        else:
+            return None
 
     def calculate_confidence(self, row):
         """

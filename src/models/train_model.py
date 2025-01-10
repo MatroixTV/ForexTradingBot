@@ -1,32 +1,34 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import joblib
 
-def train_model():
-    # Load dataset
-    df = pd.read_csv('C:/Users/ismac/PycharmProjects/forex_trading_bot/src/data/training_dataset.csv')
+def train_trade_decision_model(input_file, output_model):
+    """
+    Trains a classification model to predict trade signals.
+    """
+    # Load the training data
+    df = pd.read_csv(input_file)
+    features = ['RSI', 'MACD', 'MACD_Signal', 'RTD_Trend', 'RSI_Squared', 'MACD_Signal_Diff']
+    X = df[features]
+    y = df['Target']
 
-    # Split into features and target
-    X = df.drop(columns=['target'])
-    y = df['target']
+    # Split data
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Split into training and test sets
-    from sklearn.model_selection import train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train model
+    # Train the model
     model = RandomForestClassifier(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
 
-    # Evaluate model
-    y_pred = model.predict(X_test)
-    print("Classification Report:")
-    print(classification_report(y_test, y_pred))
+    # Validate the model
+    y_val_pred = model.predict(X_val)
+    print("Validation Classification Report:")
+    print(classification_report(y_val, y_val_pred))
 
-    # Save model
-    joblib.dump(model, 'trade_decision_model.pkl')
-    print("Model saved as trade_decision_model.pkl")
+    # Save the model
+    joblib.dump(model, output_model)
+    print(f"Model saved to {output_model}")
 
 if __name__ == "__main__":
-    train_model()
+    train_trade_decision_model("training_dataset.csv", "trade_decision_model.pkl")
