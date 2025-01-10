@@ -71,83 +71,54 @@
 #     return df
 
 
-import numpy as np
 import pandas as pd
 from ta.momentum import RSIIndicator
-from ta.volatility import BollingerBands, AverageTrueRange  # Corrected Import
 from ta.trend import MACD
+from src.indicators.xmode import XMode
+from src.indicators.rtd import RTD
+from src.indicators.maw import MAW
 
 
 def calculate_indicators(df):
     """
-    Calculate all indicators and add them to the DataFrame.
+    Calculate technical indicators and append them to the DataFrame.
+    :param df: DataFrame with OHLCV data.
+    :return: DataFrame with calculated indicators.
     """
-    # Ensure required columns are present
-    required_columns = ['Close', 'High', 'Low', 'Open']
-    for col in required_columns:
-        if col not in df.columns:
-            raise ValueError(f"Missing required column: {col}")
+    # Calculate RSI
+    rsi_indicator = RSIIndicator(close=df['Close'], window=14)
+    df['RSI'] = rsi_indicator.rsi()
 
-    # Bollinger Bands
-    bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
-    df['BB_Upper'] = bb.bollinger_hband()
-    df['BB_Lower'] = bb.bollinger_lband()
-
-    # RSI
-    rsi = RSIIndicator(close=df['Close'], window=14)
-    df['RSI'] = rsi.rsi()
-
-    # MACD
+    # Calculate MACD and Signal Line
     macd = MACD(close=df['Close'], window_slow=26, window_fast=12, window_sign=9)
     df['MACD'] = macd.macd()
     df['MACD_Signal'] = macd.macd_signal()
 
-    # ATR
-    atr = AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close'], window=14)
-    df['ATR'] = atr.average_true_range()
+    # Calculate Bollinger Bands
+    df['BB_Upper'] = df['Close'].rolling(window=20).mean() + 2 * df['Close'].rolling(window=20).std()
+    df['BB_Lower'] = df['Close'].rolling(window=20).mean() - 2 * df['Close'].rolling(window=20).std()
 
-    # MAMA/FAMA
-    df['MAMA'], df['FAMA'] = calculate_mama_fama(df['Close'])
+    # Calculate ATR
+    df['ATR'] = df['High'] - df['Low']
 
-    # RTD
-    df['RTD_Trend'] = calculate_rtd(df)
+    # Calculate XMode Levels
+    xmode = XMode(df)
+    xmode_levels = xmode.calculate_levels()
+    df = pd.concat([df, xmode_levels], axis=1)
+
+    # Calculate RTD
+    rtd = RTD(df)
+    rtd_values = rtd.calculate_rtd()
+    df = pd.concat([df, rtd_values], axis=1)
+
+    # Calculate MAW
+    maw = MAW(df)
+    maw_values = maw.calculate_maw()
+    df = pd.concat([df, maw_values], axis=1)
 
     # Fill NaN values
-    df.fillna(method='bfill', inplace=True)
-    df.fillna(method='ffill', inplace=True)
+    df.fillna(method="bfill", inplace=True)
+    df.fillna(method="ffill", inplace=True)
 
     print(f"Indicators calculated: {list(df.columns)}")
     return df
-
-
-def calculate_mama_fama(series, fast_limit=0.5, slow_limit=0.05):
-    """
-    Calculate MAMA (MESA Adaptive Moving Average) and FAMA (Following Adaptive Moving Average).
-    """
-    mama = np.zeros(len(series))
-    fama = np.zeros(len(series))
-    smooth = np.zeros(len(series))
-    detrender = np.zeros(len(series))
-    period = np.zeros(len(series))
-    phase = np.zeros(len(series))
-    alpha = np.zeros(len(series))
-
-    for i in range(1, len(series)):
-        smooth[i] = (4 * series[i] + 3 * series[i - 1] + 2 * series[i - 2] + series[i - 3]) / 10
-        detrender[i] = smooth[i] - smooth[i - 1]
-        phase[i] = np.arctan2(detrender[i], detrender[i - 1]) if detrender[i - 1] != 0 else 0
-        period[i] = 0.9 * period[i - 1] + 0.1 * (6.28 / phase[i]) if phase[i] != 0 else period[i - 1]
-        alpha[i] = 2 / (period[i] + 1)
-        mama[i] = alpha[i] * series[i] + (1 - alpha[i]) * mama[i - 1]
-        fama[i] = 0.5 * alpha[i] * mama[i] + (1 - 0.5 * alpha[i]) * fama[i - 1]
-
-    return pd.Series(mama), pd.Series(fama)
-
-
-def calculate_rtd(df, period=14):
-    """
-    Calculate Relative Trend Direction (RTD).
-    """
-    df['Price_Change'] = df['Close'].diff()
-    rtd = df['Price_Change'].rolling(window=period).sum()
-    return rtd

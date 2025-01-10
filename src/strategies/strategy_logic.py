@@ -40,38 +40,50 @@
 #     return signal, sl, tp
 
 
-import pandas as pd
+import numpy as np
 
 
 class TradingStrategy:
-    def __init__(self):
-        self.previous_signal = None
-
-    def calculate_confidence(self, row):
-        # Confidence based on RTD, MACD, and RSI
-        confidence = 0
-        if row["RTD_Trend"] > 0:
-            confidence += 0.4
-        if row["MACD"] > row["MACD_Signal"]:
-            confidence += 0.3
-        if 30 < row["RSI"] < 70:
-            confidence += 0.3
-        return confidence
+    def __init__(self, df):
+        """
+        Initialize TradingStrategy with the DataFrame containing indicators.
+        :param df: DataFrame with calculated indicators.
+        """
+        self.df = df
 
     def trading_logic(self, row):
+        """
+        Define trading logic using indicators and signals.
+        :param row: Single row of DataFrame.
+        :return: Signal ('BUY', 'SELL', or None).
+        """
         try:
-            confidence = self.calculate_confidence(row)
-            print(f"Confidence: {confidence}, RTD_Trend: {row['RTD_Trend']}, RSI: {row['RSI']}, MACD: {row['MACD']}")
+            rsi, macd, macd_signal = row['RSI'], row['MACD'], row['MACD_Signal']
+            xmode_signal, rtd_trend, maw_oscillator = row['XMode_Signal'], row['RTD_Trend'], row['MAW_Oscillator']
 
-            if confidence >= 0.6:
-                if self.previous_signal != "BUY":
-                    self.previous_signal = "BUY"
-                    return "BUY"
-            elif confidence <= 0.4:
-                if self.previous_signal != "SELL":
-                    self.previous_signal = "SELL"
-                    return "SELL"
-            return None
+            # Example trading logic
+            if xmode_signal == 1 and rtd_trend > 0 and maw_oscillator > 1:
+                return 'BUY'
+            elif xmode_signal == -1 and rtd_trend < 0 and maw_oscillator < -1:
+                return 'SELL'
         except Exception as e:
             print(f"Error in trading_logic: {e}")
-            return None
+        return None
+
+    def calculate_confidence(self, row):
+        """
+        Calculate confidence for a trade based on multiple indicators.
+        :param row: Single row of DataFrame.
+        :return: Confidence score.
+        """
+        confidence = 0
+        try:
+            if row['RTD_Trend'] > 0:  # Favorable RTD trend
+                confidence += 0.4
+            if row['XMode_Signal'] != 0:  # XMode Signal present
+                confidence += 0.3
+            if abs(row['MAW_Oscillator']) > 1:  # Significant MAW Oscillation
+                confidence += 0.3
+        except Exception as e:
+            print(f"Error in calculate_confidence: {e}")
+        return confidence
