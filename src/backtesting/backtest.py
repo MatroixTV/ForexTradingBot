@@ -31,24 +31,38 @@
 import pandas as pd
 from src.indicators.indicators_setup import calculate_indicators
 from src.strategies.strategy_logic import TradingStrategy
-
 def backtest(df):
-    trades = []
-    initial_balance = 10000
-    balance = initial_balance
-    position = None
-    strategy = TradingStrategy(df)  # Pass the DataFrame as an argument
+    """
+    Perform backtesting on the DataFrame using the defined strategy logic.
+    """
+    # Ensure 'Date' is a column and not part of the index
+    if "Date" not in df.columns:
+        df.reset_index(inplace=True)
+        print("Resetting index to include 'Date' as a column.")
 
-    for index, row in df.iterrows():
+    trades = []
+    balance = 10000  # Initial balance
+    position = None  # Track the current open position
+    strategy = TradingStrategy(df)
+
+    for idx, row in df.iterrows():
         action = strategy.trading_logic(row)
-        print(f"Index: {index}, Action: {action}")
-        if action == "BUY" and position is None:
+
+        if action == "BUY" and not position:
+            print(f"BUY signal triggered at {row['Date']}, price: {row['Close']}")
             position = {"entry_price": row["Close"], "entry_date": row["Date"]}
-            trades.append({"action": "BUY", "price": row["Close"], "date": row["Date"]})
-        elif action == "SELL" and position is not None:
+
+        elif action == "SELL" and position:
+            print(f"SELL signal triggered at {row['Date']}, price: {row['Close']}")
             profit = row["Close"] - position["entry_price"]
             balance += profit
-            trades.append({"action": "SELL", "price": row["Close"], "date": row["Date"], "profit": profit})
+            trades.append({
+                "entry_date": position["entry_date"],
+                "exit_date": row["Date"],
+                "entry_price": position["entry_price"],
+                "exit_price": row["Close"],
+                "profit": profit,
+            })
             position = None
 
     return trades, balance
